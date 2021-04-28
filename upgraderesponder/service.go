@@ -58,9 +58,10 @@ type ResponseConfig struct {
 }
 
 type Version struct {
-	Name        string // must be in semantic versioning
-	ReleaseDate string
-	Tags        []string
+	Name                 string   `json:"name"` // must be in semantic versioning
+	ReleaseDate          string   `json:"releaseDate"`
+	MinUpgradableVersion string   `json:"minUpgradableVersion,omitempty"`
+	Tags                 []string `json:"tags"`
 }
 
 type CheckUpgradeRequest struct {
@@ -159,7 +160,8 @@ func (s *Server) createDB(name string) error {
 }
 
 func (s *Server) validateAndLoadResponseConfig(config *ResponseConfig) error {
-	for _, v := range config.Versions {
+	for _, version := range config.Versions {
+		v := version
 		if len(v.Tags) == 0 {
 			return fmt.Errorf("invalid empty label for %v", v)
 		}
@@ -248,19 +250,10 @@ func (s *Server) getParsedVersionWithTag(tag string) (*semver.Version, *Version,
 func (s *Server) GenerateCheckUpgradeResponse(request *CheckUpgradeRequest) (*CheckUpgradeResponse, error) {
 	resp := &CheckUpgradeResponse{}
 
-	// Only supports `latest` label for now
-	//latestVer, version, err := s.getParsedVersionWithTag(VersionTagLatest)
-	_, version, err := s.getParsedVersionWithTag(VersionTagLatest)
-	if err != nil {
-		logrus.Errorf("BUG: unable to get an valid tag for %v: %v", VersionTagLatest, err)
-		return nil, err
+	for _, v := range s.VersionMap {
+		resp.Versions = append(resp.Versions, *v)
 	}
-	/* disable version dependency reseponse
-	if reqVer.LessThan(latestVer) {
-		resp.Versions = append(resp.Versions, *version)
-	}
-	*/
-	resp.Versions = append(resp.Versions, *version)
+
 	return resp, nil
 }
 
